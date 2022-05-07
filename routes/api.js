@@ -1,10 +1,14 @@
 const express = require('express');
 const router = express.Router(); 
 const {vistaUser, crearUser, vistaUnUser,editarUser,borrarUser, consultaAxios} = require('../controller/controller.js')
+const {check,validationResult, body} = require("express-validator");
 
-/* GET users listing. */
 router.get('/veruser', vistaUser);
-router.post('/crearuser', crearUser);
+router.post('/crearuser',[
+    check('nombre').not().isEmpty().withMessage('El nombre es obligatorio'),
+    check('dni', 'Debe tener un numero Dni').not().isEmpty().isNumeric().isLength({max:8,min:8}),
+    check('email', 'Debe tener un email valido').not().isEmpty(),
+], crearUser);
 router.get('/veruser/:id', vistaUnUser);
 router.put('/editaruser/:id', editarUser);
 router.delete('/eliminaruser/:id', borrarUser);

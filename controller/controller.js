@@ -1,5 +1,5 @@
 const res = require('express/lib/response');
-const User = require('../models/model');
+const {User} = require('../models/model');
 const {validationResult} = require("express-validator");
 const axios = require('axios');
 const bcryptjs = require('bcryptjs');
@@ -27,35 +27,22 @@ const vistaUnUser = async (req, res) => {
 }
 
 const crearUser = async (req, res)=>{
-    const {nombre, dni, email, password} = req.body;
     try {
-        if(!email){
-            return res.status(400).josn({msg:'El email es obligatorio'})
-        };
-        if(email || nombre || dni){
-            const error = validationResult(req);
-            if(!error.isEmpty()){
-                return res.status(400).json({error: error.array()});
-            };
+        const error = validationResult(req)
+        if (error.isEmpty()) {
+            const {nombre, dni, email, password} = req.body
+            const usuario = new User({nombre, dni, email, password});
+            const salt = await bcryptjs.genSalt(10);
+            usuario.password = await bcryptjs.hash(password, salt);
+            await usuario.save();
+            res.status(201).json({msg:"Usuario cargado", usuario})
         }else {
-            return res.status(400).json({msg:'El solo puede ser creado pasando todos sus datos'})
-        };
-        let newUsuario = await User.findOne({email});
-        if(newUsuario){
-            return res.status(400).json({msg:'El usuario ya existe'});
-        }
-        newUsuario = new User(req.body);
-
-        const salt = await bcryptjs.genSalt(10);
-
-        newUsuario.password = await bcryptjs.hash(password, salt);
-        await newUsuario.save();
-        res.status(201).json({msg:'Se ha creado un nuevo usuario'});
-    } catch(error){
-        console.log(error)
-        res.status(400).send({msg:'Hubo un error al crear el usuario', error});
-    };
-};
+            res.status(400).json({msg:"Error al cargar", error});
+}  
+   }catch (err) {
+            res.status(400).json({msg:"Ups, ocurrió un error, estos datos ya existe en la base de datos",err});
+}
+}
 
 const editarUser = async (req, res) => {
     const { _id, nombre, dni, email, password } = req.body;
