@@ -6,7 +6,7 @@ const bcryptjs = require('bcryptjs');
 
 const vistaUno = (req, res)=>{
     res.render('index', { title: 'Express' });
-}
+};
 
 const vistaUser = async (req, res) =>{
     try {
@@ -15,7 +15,7 @@ const vistaUser = async (req, res) =>{
     } catch (error) {
         res.status(400).json({msg:'No se puede consultar en ste momento', error})
     } 
-}
+};
 
 const vistaUnUser = async (req, res) => {
     try {
@@ -24,25 +24,32 @@ const vistaUnUser = async (req, res) => {
     } catch (error) {
         res.status(400).json({msg:'No se pudo realizar la consulta'})
     }
-}
+};
 
 const crearUser = async (req, res)=>{
+    
+    const errores = validationResult(req);
+    if(!errores.isEmpty()){
+        return res.status(400).json({errores: errores.array()})
+    }
+    const {email, dni, password} = req.body;
     try {
-        const error = validationResult(req)
-        if (error.isEmpty()) {
-            const {nombre, dni, email, password} = req.body
-            const usuario = new User({nombre, dni, email, password});
-            const salt = await bcryptjs.genSalt(10);
-            usuario.password = await bcryptjs.hash(password, salt);
-            await usuario.save();
-            res.status(201).json({msg:"Usuario cargado", usuario})
-        }else {
-            res.status(400).json({msg:"Error al cargar", error});
-}  
-   }catch (err) {
-            res.status(400).json({msg:"Ups, ocurrió un error, estos datos ya existe en la base de datos",err});
-}
-}
+        let usuario = await User.findOne({email, dni})
+        if(usuario){
+            return res.status(400).json({msg:'El usuario ya existe'});
+        }
+        usuario = new User(req.body);
+
+        const salt = await bcryptjs.genSalt(10);
+        usuario.password = await bcryptjs.hash(password, salt);
+
+        await usuario.save();
+
+        res.status(200).json({msg:'Usuario registrado con exito'})    
+    } catch (error) {
+        res.status(400).json({msg:'Existe un error', error})
+    }
+};
 
 const editarUser = async (req, res) => {
     const { _id, nombre, dni, email, password } = req.body;
@@ -82,14 +89,14 @@ const editarUser = async (req, res) => {
                         password: mypassword
                         };  
         
-        const usuario = await User.findByIdAndUpdate( valorClave, editarUsuario );
+        await User.findByIdAndUpdate( valorClave, editarUsuario );
 
         res.status(200).json({msg:'Usuario editado', editarUsuario}); 
 
     } catch (error) {
         res.status(400).send({msg: 'Hubo un error al buscar el usuario, o el usuario no se encuentro en la base',error});      
     };
-}
+};
 
 const borrarUser = async (req, res) =>{
     try {
@@ -98,7 +105,7 @@ const borrarUser = async (req, res) =>{
     } catch (error) {
         res.status(400).json({msg:'Usuario no encontrado',error})
     }
-}
+};
 
 const consultaAxios = async (req, res) =>{
     const resultado = await axios.get("http://localhost:8080/api/veruser", {Timeout: 10000}).catch((error)=>{
@@ -106,6 +113,6 @@ const consultaAxios = async (req, res) =>{
         throw error;
     });
     res.json(resultado.data.usuarios[0])
-}
+};
 
-module.exports = {vistaUno, crearUser, vistaUser,vistaUnUser,editarUser,borrarUser,consultaAxios}
+module.exports = {vistaUno, crearUser, vistaUser,vistaUnUser,editarUser,borrarUser,consultaAxios};
