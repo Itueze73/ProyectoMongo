@@ -13,7 +13,7 @@ const vistaUser = async (req, res) =>{
         const usuarios = await User.find()
         res.status(201).json({usuarios, msg:'Usuarios registrados'})
     } catch (error) {
-        res.status(400).json({msg:'No se puede consultar en ste momento', error})
+        res.status(500).json({msg:'No se puede consultar en este momento', error})
     } 
 };
 
@@ -22,7 +22,7 @@ const vistaUnUser = async (req, res) => {
         const usuarios = await User.findById(req.params.id)
         res.json({usuarios, msg:'Usuario consultado'})
     } catch (error) {
-        res.status(400).json({msg:'No se pudo realizar la consulta'})
+        res.status(500).json({msg:'No se pudo realizar la consulta'})
     }
 };
 
@@ -47,55 +47,38 @@ const crearUser = async (req, res)=>{
 
         res.status(200).json({msg:'Usuario registrado con exito'})    
     } catch (error) {
-        res.status(400).json({msg:'Existe un error', error})
+        res.status(400).json({msg:'Existe un error'})
     }
 };
 
 const editarUser = async (req, res) => {
-    const { _id, nombre, dni, email, password } = req.body;
 
-    const valorClave = (_id) 
-        ? _id 
-        : (req.params.id)
-            ? req.params.id
-            : req.query.id
-        ;    
-    
-    let editarUsuario;
-
+    const errores = validationResult(req);
+    if(!errores.isEmpty()){
+        return res.status(400).json({errores: errores.array()})
+    }
+    const {nombre, dni, email, password} = req.body;
+    const nuevoUsuario = {};
+    if (nombre && dni && email && password)  {
+        nuevoUsuario.nombre = nombre,
+        nuevoUsuario.dni = dni,
+        nuevoUsuario.email = email,
+        nuevoUsuario.password = password
+    }
     try {
-        if(!valorClave) {
-            return res.status(400).json({ msg: 'El id es obligatorio' });
-        };
-        
-        if ( _id || nombre || dni || email || password) {
-            const errores = validationResult(req);
-            if( !errores.isEmpty() ) {
-                return res.status(400).json({errores: errores.array()});
-            };    
-        } else {
-            return res.status(400).json({ msg: 'El usuario solo puede ser modificado pasando todos sus datos'});
-        };
-        
+        let usuario = await User.findById(req.params.id);
+        if (!usuario) {
+             return res.status(404).json({msg:'Usuario no encontrado'})
+        }
         const salt = await bcryptjs.genSalt(10);
-        const mypassword = await bcryptjs.hash(password, salt );
+        nuevoUsuario.password = await bcryptjs.hash(password, salt);
 
-        editarUsuario = req.body;
-        editarUsuario={
-                        _id: valorClave,
-                        nombre: nombre,
-                        dni: dni,
-                        email:email,
-                        password: mypassword
-                        };  
-        
-        await User.findByIdAndUpdate( valorClave, editarUsuario );
-
-        res.status(200).json({msg:'Usuario editado', editarUsuario}); 
-
+        await usuario.save();
+        usuario = await User.findByIdAndUpdate({_id: req.params.id}, {$set: nuevoUsuario}, {new: true});
+        res.status(200).json({msg:'Usuario editado'})
     } catch (error) {
-        res.status(400).send({msg: 'Hubo un error al buscar el usuario, o el usuario no se encuentro en la base',error});      
-    };
+        res.status(400).json({msg:'Existe un error', error})
+    }
 };
 
 const borrarUser = async (req, res) =>{
@@ -112,7 +95,7 @@ const consultaAxios = async (req, res) =>{
         error.origin = 'Error en la direcion URL'
         throw error;
     });
-    res.json(resultado.data.usuarios[0])
+    res.json(resultado.data.usuarios[1])
 };
 
 module.exports = {vistaUno, crearUser, vistaUser,vistaUnUser,editarUser,borrarUser,consultaAxios};

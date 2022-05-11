@@ -8,10 +8,10 @@ const dbConnection = async () => {
             useNewUrlParser: true,
             useUnifiedTopology: true,
         } )
-        console.log('Base de datos conectada');
+        console.log('Conectado a la base de datos de Itu');
     } catch (error) {
         console.log(error);
-        throw new Error('Error a la hora de iniciar la base de datos')   
+        throw new Error('No se puede conectar en este momento')   
     }
 }
 
