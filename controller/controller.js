@@ -3,6 +3,7 @@ const {User} = require('../models/model');
 const {validationResult} = require("express-validator");
 const axios = require('axios');
 const bcryptjs = require('bcryptjs');
+//const jwt = require('jsonwebtoken');
 
 const vistaUno = (req, res)=>{
     res.render('index', { title: 'Express' });
@@ -34,16 +35,32 @@ const crearUser = async (req, res)=>{
     }
     const {email, dni, password} = req.body;
     try {
-        let usuario = await User.findOne({email, dni})
+        let usuario = await User.findOne({email}, {dni});
+
         if(usuario){
             return res.status(400).json({msg:'El usuario ya existe'});
         }
+        
         usuario = new User(req.body);
 
         const salt = await bcryptjs.genSalt(10);
         usuario.password = await bcryptjs.hash(password, salt);
 
         await usuario.save();
+
+        // const payload = {
+        //         usuario: {
+        //             id: usuario.id
+        //         }
+        // };
+
+        // jwt.sign(payload, process.env.SECRETA, {
+        //     expiresIn: 3600
+        // }, (error, token) => {
+        //     if (error) throw error;
+                
+        //     res.json({ token });
+        // });
 
         res.status(200).json({msg:'Usuario registrado con exito'})    
     } catch (error) {
